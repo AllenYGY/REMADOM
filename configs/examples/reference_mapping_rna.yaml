@@ -1,0 +1,14 @@
+data:
+  path: data/pbmc_ref.h5ad
+model:
+  latent_bio: 16
+  encoders:
+    rna: { in_dim: 2000 }
+  decoders:
+    rna: { out_dim: 2000 }
+optim:
+  epochs: 10
+  batch_size: 512
+  lr: 1e-3
+logging:
+  run_dir: runs/ref_map

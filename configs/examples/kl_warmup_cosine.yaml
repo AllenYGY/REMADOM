@@ -1,0 +1,34 @@
+data:
+  source:
+    path: data/unpaired_rna_atac_small.h5ad
+    batch_key: batch
+    keys:
+      rna: { X: "X", var_key: "gene_ids" }
+      atac: { X: "X_atac" }
+
+model:
+  latent_bio: 16
+  encoders:
+    rna: { in_dim: 1000 }
+    atac: { in_dim: 2000 }
+  decoders:
+    rna: { out_dim: 1000, weight: 1.0 }
+    atac: { out_dim: 2000, weight: 1.0 }
+  beta: 1.0
+  beta_schedule: { kind: "cosine", start: 0.1, end: 1.0, epochs: 30 }
+
+alignment:
+  gw:
+    enabled: true
+    weight: 0.05
+    epsilon: 0.005
+    fused_alpha: 0.5
+    schedule: { kind: "cosine", start: 0.02, end: 0.002, epochs: 30 }
+
+optim:
+  epochs: 30
+  batch_size: 512
+  lr: 1e-3
+
+logging:
+  run_dir: runs/kl_warmup_cosine

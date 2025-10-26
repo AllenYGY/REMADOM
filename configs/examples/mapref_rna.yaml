@@ -1,0 +1,27 @@
+data:
+  reference:
+    path: data/pbmc_ref.h5ad
+    batch_key: batch
+    keys:
+      rna: { X: "X", var_key: "gene_ids" }
+  query:
+    path: data/pbmc_query.h5ad
+    batch_key: batch
+    keys:
+      rna: { X: "X", var_key: "gene_ids" }
+  registry_path: runs/ref_map/registry.json
+
+model:
+  latent_bio: 16
+  encoders:
+    rna: { in_dim: 2000 }
+  decoders:
+    rna: { out_dim: 2000 }
+
+optim:
+  epochs: 5
+  batch_size: 512
+  lr: 1e-3
+
+logging:
+  run_dir: runs/ref_map

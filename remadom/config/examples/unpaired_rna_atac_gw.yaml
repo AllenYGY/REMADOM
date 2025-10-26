@@ -1,0 +1,19 @@
+data:
+  path: ""
+model:
+  latent_bio: 16
+  encoders:
+    rna: { in_dim: 1000 }
+    atac: { in_dim: 2000 }
+  decoders:
+    rna: { out_dim: 1000 }
+    atac: { out_dim: 2000 }
+alignment:
+  gw:
+    enabled: true
+    weight: 1.0
+    epsilon: 0.001
+    fused_alpha: null
+optim:
+  epochs: 10
+  lr: 1e-3

@@ -1,0 +1,32 @@
+data:
+  source:
+    path: data/unpaired_rna_atac_small.h5ad
+    batch_key: batch
+    keys:
+      rna: { X: "X", var_key: "gene_ids" }
+      atac: { X: "X_atac" }
+  registry_path: runs/unpaired_rna_atac_fgw/registry.json
+
+model:
+  latent_bio: 16
+  encoders:
+    rna: { in_dim: 1000 }
+    atac: { in_dim: 2000 }
+  decoders:
+    rna: { out_dim: 1000 }
+    atac: { out_dim: 2000 }
+
+alignment:
+  gw:
+    enabled: true
+    weight: 0.05
+    epsilon: 0.001
+    fused_alpha: 0.5
+
+optim:
+  epochs: 30
+  batch_size: 512
+  lr: 1e-3
+
+logging:
+  run_dir: runs/unpaired_rna_atac_fgw

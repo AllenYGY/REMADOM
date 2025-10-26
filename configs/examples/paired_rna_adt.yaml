@@ -1,0 +1,21 @@
+data:
+  path: data/paired_citeseq_small.h5ad
+model:
+  latent_bio: 16
+  encoders:
+    rna: { in_dim: 2000 }
+    adt: { in_dim: 50 }
+  decoders:
+    rna: { out_dim: 2000 }
+    adt: { out_dim: 50 }
+alignment:
+  mmd:
+    enabled: true
+    weight: 0.1
+    bandwidth: 2.0
+optim:
+  epochs: 20
+  batch_size: 512
+  lr: 1e-3
+logging:
+  run_dir: runs/paired_rna_adt

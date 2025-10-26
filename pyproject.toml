@@ -1,0 +1,114 @@
+[build-system]
+requires = ["setuptools>=68", "wheel", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "remadom"
+description = "remadom: Multi-omic alignment and generative modeling (RNA/ATAC/ADT) with PyTorch"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "Your Team", email = "you@example.com" }
+]
+keywords = [
+  "single-cell", "multi-omics", "RNA-seq", "ATAC-seq", "ADT", "VAE",
+  "optimal transport", "MMD", "alignment", "representation learning"
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Intended Audience :: Science/Research"
+]
+version = "0.8.1"
+
+dependencies = [
+  "numpy>=1.23",
+  "scipy>=1.9",
+  "torch>=2.1",
+  "pydantic>=2.3",
+  "pyyaml>=6.0",
+  "tqdm>=4.64"
+]
+
+[project.optional-dependencies]
+zarr = ["anndata>=0.9", "zarr>=2.15"]
+scanpy = ["scanpy>=1.9", "pandas>=1.5", "seaborn>=0.12"]
+ann = ["faiss-cpu>=1.7.4; platform_system!='Windows'", "hnswlib>=0.8.0"]
+ot = ["geomloss>=0.2.6", "pykeops>=2.2"]
+plots = ["matplotlib>=3.7", "umap-learn>=0.5"]
+dev = [
+  "pytest>=7.4",
+  "pytest-cov>=4.1",
+  "black>=24.3.0",
+  "isort>=5.12.0",
+  "flake8>=6.1.0",
+  "mypy>=1.5.0",
+  "pre-commit>=3.6.0",
+  "ipykernel>=6.26",
+  "jupyter>=1.0.0"
+]
+all = [
+  "remadom[zarr]",
+  "remadom[scanpy]",
+  "remadom[ann]",
+  "remadom[ot]",
+  "remadom[plots]"
+]
+
+[project.urls]
+Homepage = "https://github.com/your-org/remadom"
+Repository = "https://github.com/your-org/remadom"
+Issues = "https://github.com/your-org/remadom/issues"
+Documentation = "https://your-org.github.io/remadom/"
+
+[project.scripts]
+remadom-train = "remadom.cli.train:main"
+remadom-embed = "remadom.cli.embed:main"
+remadom-impute = "remadom.cli.impute:main"
+remadom-eval = "remadom.cli.eval:main"
+remadom-autotune = "remadom.cli.autotune:main"
+remadom-export = "remadom.cli.export_data:main"
+remadom-make-zarr-manifest = "remadom.cli.make_zarr_manifest:main"
+remadom-mapref = "remadom.cli.mapref:main"
+
+[tool.setuptools]
+packages = { find = { where = ["."], include = ["remadom*"] } }
+include-package-data = true
+
+[tool.setuptools.package-data]
+remadom = ["configs/**/*.yaml", "examples/**/*.ipynb", "py.typed"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+
+[tool.flake8]
+max-line-length = 100
+ignore = ["E203", "W503"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --disable-warnings"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+strict_optional = false
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = false
+show_error_codes = true

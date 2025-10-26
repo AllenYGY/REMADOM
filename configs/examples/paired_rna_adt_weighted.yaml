@@ -1,0 +1,31 @@
+data:
+  source:
+    path: data/paired_citeseq_small.h5ad
+    batch_key: batch
+    keys:
+      rna: { X: "X", var_key: "gene_ids" }
+      adt: { obsm: "X_adt", uns_key: "adt_names" }
+
+model:
+  latent_bio: 16
+  encoders:
+    rna: { in_dim: 2000 }
+    adt: { in_dim: 50 }
+  decoders:
+    rna: { out_dim: 2000, weight: 1.0 }
+    adt: { out_dim: 50, weight: 0.5 }  # downweight ADT recon to prioritize RNA
+
+alignment:
+  ot:
+    enabled: true
+    weight: 0.05
+    epsilon: 0.2
+    schedule: { kind: "cosine", start: 0.2, end: 0.01, epochs: 20 }
+
+optim:
+  epochs: 20
+  batch_size: 512
+  lr: 1e-3
+
+logging:
+  run_dir: runs/paired_rna_adt_weighted

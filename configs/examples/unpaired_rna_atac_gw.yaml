@@ -1,0 +1,22 @@
+data:
+  path: data/unpaired_rna_atac_small.h5ad
+model:
+  latent_bio: 16
+  encoders:
+    rna: { in_dim: 1000 }
+    atac: { in_dim: 2000 }
+  decoders:
+    rna: { out_dim: 1000 }
+    atac: { out_dim: 2000 }
+alignment:
+  gw:
+    enabled: true
+    weight: 0.1
+    epsilon: 0.001
+    fused_alpha: null
+optim:
+  epochs: 20
+  batch_size: 512
+  lr: 1e-3
+logging:
+  run_dir: runs/unpaired_rna_atac_gw

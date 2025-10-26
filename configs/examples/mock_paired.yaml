@@ -1,0 +1,44 @@
+data:
+  source:
+    path: /Users/allenygy/Research/REMADOM/examples/mock/mock_paired_cite.h5ad
+    batch_key: batch
+    keys:
+      rna:
+        X: X
+      adt:
+        obsm: X_adt
+        uns_key: adt_names
+model:
+  latent_bio: 16
+  encoders:
+    rna:
+      in_dim: 1000
+      hidden_dims:
+      - 256
+      - 256
+    adt:
+      in_dim: 30
+      hidden_dims:
+      - 256
+      - 256
+  decoders:
+    rna:
+      out_dim: 1000
+      dispersion: gene
+      library: true
+    adt:
+      out_dim: 30
+      library: false
+      hidden_dims:
+      - 128
+      - 128
+  beta: 1.0
+optim:
+  epochs: 10
+  batch_size: 256
+  lr: 0.001
+  amp:
+    enabled: true
+    dtype: bf16
+logging:
+  run_dir: runs/mock

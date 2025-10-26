@@ -1,0 +1,40 @@
+data:
+  source:
+    path: /Users/allenygy/Research/REMADOM/examples/mock/mock_unpaired_rna_atac.h5ad
+    batch_key: batch
+    keys:
+      rna:
+        X: X
+      atac:
+        obsm: X_atac
+model:
+  latent_bio: 16
+  encoders:
+    rna:
+      in_dim: 1000
+      hidden_dims:
+      - 256
+      - 256
+    atac:
+      in_dim: 5000
+      hidden_dims:
+      - 256
+      - 256
+  decoders:
+    rna:
+      out_dim: 1000
+      dispersion: gene
+      library: true
+    atac:
+      out_dim: 5000
+      library: false
+  beta: 1.0
+optim:
+  epochs: 10
+  batch_size: 256
+  lr: 0.001
+  amp:
+    enabled: true
+    dtype: bf16
+logging:
+  run_dir: runs/mock
