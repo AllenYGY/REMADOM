@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 import torch
@@ -52,7 +53,13 @@ class Trainer:
         if self.device.type != "cuda":
             self._amp_enabled = False
         self._use_scaler = self._amp_enabled and self._amp_dtype == torch.float16 and torch.cuda.is_available()
-        self.scaler = torch.cuda.amp.GradScaler(enabled=self._use_scaler)
+        if hasattr(torch, "amp") and hasattr(torch.amp, "GradScaler"):
+            try:
+                self.scaler = torch.amp.GradScaler(device_type="cuda", enabled=self._use_scaler)
+            except TypeError:  # Older torch versions don't accept device_type
+                self.scaler = torch.amp.GradScaler(enabled=self._use_scaler)
+        else:  # pragma: no cover - compatibility path for older PyTorch
+            self.scaler = torch.cuda.amp.GradScaler(enabled=self._use_scaler)
         if cfg is not None and hasattr(cfg, "optim"):
             clip = getattr(cfg.optim, "grad_clip", None)
             if clip is None or clip <= 0:
@@ -134,7 +141,20 @@ class Trainer:
     # ------------------------------------------------------------------
     def _train_step(self, batch: Batch) -> Dict[str, float]:
         self.opt.zero_grad(set_to_none=True)
-        autocast_ctx = torch.cuda.amp.autocast(enabled=self._amp_enabled, dtype=self._amp_dtype)
+        if self._amp_enabled:
+            if hasattr(torch, "amp") and hasattr(torch.amp, "autocast"):
+                try:
+                    autocast_ctx = torch.amp.autocast(
+                        device_type="cuda",
+                        dtype=self._amp_dtype,
+                        enabled=True,
+                    )
+                except TypeError:
+                    autocast_ctx = torch.amp.autocast(dtype=self._amp_dtype, enabled=True)
+            else:  # pragma: no cover - compatibility path for older PyTorch
+                autocast_ctx = torch.cuda.amp.autocast(enabled=True, dtype=self._amp_dtype)
+        else:
+            autocast_ctx = nullcontext()
         with autocast_ctx:
             out = self.manager.masked_elbo(batch, beta=self._beta_value, mod_weights=self._modality_weights)
             loss = out["total"]

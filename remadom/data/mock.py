@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Dict, Tuple
+from typing import TYPE_CHECKING, Dict, Tuple
 
 import numpy as np
 import pandas as pd
@@ -14,10 +13,15 @@ except Exception as exc:  # pragma: no cover - optional dependency
 else:
     _IMPORT_ERROR = None
 
+if TYPE_CHECKING:
+    from anndata import AnnData
+
 
 def _require_anndata() -> None:
     if ad is None:
-        raise RuntimeError("anndata is required to generate mock datasets") from _IMPORT_ERROR
+        raise RuntimeError(
+            "anndata is required to generate mock datasets"
+        ) from _IMPORT_ERROR
 
 
 def _make_latent(
@@ -47,7 +51,9 @@ def _generate_atac(z: np.ndarray, n_peaks: int, rng: np.random.Generator) -> np.
     return rng.binomial(1, prob).astype(np.float32)
 
 
-def _generate_adt(z: np.ndarray, n_proteins: int, rng: np.random.Generator) -> np.ndarray:
+def _generate_adt(
+    z: np.ndarray, n_proteins: int, rng: np.random.Generator
+) -> np.ndarray:
     weights = rng.normal(scale=0.5, size=(z.shape[1], n_proteins))
     mu = (z @ weights) * 0.3 + rng.normal(scale=0.2, size=(z.shape[0], n_proteins))
     mu = np.exp(mu)
@@ -71,7 +77,7 @@ def generate_mock_dataset(
     n_proteins: int = 30,
     latent_dim: int = 16,
     seed: int | None = None,
-) -> Tuple["ad.AnnData", Dict[str, Dict[str, str]]]:
+) -> Tuple["AnnData", Dict[str, Dict[str, str]]]:
     """
     Generate a synthetic AnnData object covering a given multimodal integration scenario.
 
@@ -85,7 +91,9 @@ def generate_mock_dataset(
 
     _require_anndata()
     rng = np.random.default_rng(seed)
-    z, cluster_ids = _make_latent(n_cells, latent_dim, n_clusters=min(5, max(2, n_cells // 80)), rng=rng)
+    z, cluster_ids = _make_latent(
+        n_cells, latent_dim, n_clusters=min(5, max(2, n_cells // 80)), rng=rng
+    )
 
     masks = {m: np.zeros(n_cells, dtype=bool) for m in ("rna", "atac", "adt")}
     batch_labels = np.zeros(n_cells, dtype=int)
@@ -140,13 +148,11 @@ def generate_mock_dataset(
         masks["rna"][groups[1]] = True
         masks["adt"][groups[1]] = True
         masks["atac"][groups[2]] = True
-        dataset_labels = np.concatenate(
-            [
-                np.full(len(groups[0]), 0, dtype=int),
-                np.full(len(groups[1]), 1, dtype=int),
-                np.full(len(groups[2]), 2, dtype=int),
-            ]
-        )
+        dataset_labels = np.concatenate([
+            np.full(len(groups[0]), 0, dtype=int),
+            np.full(len(groups[1]), 1, dtype=int),
+            np.full(len(groups[2]), 2, dtype=int),
+        ])
         batch_labels = dataset_labels.copy()
         offsets = rng.normal(scale=0.6, size=(3, latent_dim))
         z = z + offsets[dataset_labels]
@@ -167,17 +173,15 @@ def generate_mock_dataset(
             continue
         data[~mask] = 0.0
 
-    obs = pd.DataFrame(
-        {
-            "batch": batch_labels,
-            "dataset": dataset_labels,
-            "cluster": [f"cluster_{c}" for c in cluster_ids],
-            "split": splits,
-            "has_rna": masks["rna"],
-            "has_atac": masks["atac"],
-            "has_adt": masks["adt"],
-        }
-    )
+    obs = pd.DataFrame({
+        "batch": batch_labels,
+        "dataset": dataset_labels,
+        "cluster": [f"cluster_{c}" for c in cluster_ids],
+        "split": splits,
+        "has_rna": masks["rna"],
+        "has_atac": masks["atac"],
+        "has_adt": masks["adt"],
+    })
     var = pd.DataFrame(index=[f"gene_{i}" for i in range(rna.shape[1])])
     adata = ad.AnnData(rna, obs=obs, var=var)
     adata.layers["counts"] = rna.astype(np.float32)

@@ -37,7 +37,7 @@ def _get_feature_names(adata, mk: Any, modality: str) -> List[str]:
 def _get_matrix_handle(adata, mk: Any):
     obsm_key = _mk_get(mk, "obsm", None)
     if obsm_key:
-        if obsm_key not in adata.obsm_keys():
+        if obsm_key not in adata.obsm:
             raise KeyError(f"obsm key {obsm_key} not found")
         return adata.obsm[obsm_key]
     X_key = _mk_get(mk, "X", "X")

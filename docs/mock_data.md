@@ -26,20 +26,20 @@ REMADOM’s Phase 1 targets rapid iteration on the core Mosaic VAE without dep
 
 3. **Scenario masking**
    - For each `problem_type`, compute `has_<mod>` masks describing which modalities are *observed*:
- - `paired`: keep RNA+ADT for all cells (CITE-like).
- - `unpaired`: split RNA-only vs ATAC-only cohorts, no overlap.
+     - `paired`: keep RNA+ADT for all cells (CITE-like).
+     - `unpaired`: split RNA-only vs ATAC-only cohorts, no overlap.
      - `bridge`: large single-modality cohorts with ~5 % paired “bridge” cells.
      - `mosaic`: each cell randomly retains any subset of {RNA, ATAC, ADT}.
      - `prediction`: training cells are paired; evaluation cells hide target modality.
-     - `hierarchical`: three studies differing in modality mix and batch effect.
-   - The generator stores masks in `adata.obs["has_<mod>"]` and zeroes out hidden entries.
-   - Downstream loaders read the masks to skip missing modalities during training.
+     - `hierarchical`: three studies with different modality mixes and batch shifts.
+   - Masks are stored in `adata.obs["has_<mod>"]`; missing entries in the data matrices are zeroed out.
+   - Downstream loaders read these masks to skip missing modalities during training.
 
 4. **AnnData packaging**
    - `adata.X` / `layers["counts"]` hold RNA counts; ATAC/ADT arrays go to `adata.obsm`.
    - `adata.obs` includes columns for `batch`, `dataset`, `cluster`, `split`, and modality masks.
    - `adata.uns["adt_names"]` captures ADT vocabulary when present.
-   - A `keys` dictionary is returned alongside the AnnData object so configs/dataloaders know where to fetch each modality.
+   - A `keys` dictionary is returned alongside the AnnData object for configuration wiring.
 
 ## Usage modes
 
@@ -57,12 +57,10 @@ adata, keys = generate_mock_dataset(
     seed=42,
 )
 adata.write_h5ad("examples/mock/mock_bridge_rna_atac.h5ad")
-print(keys)  # {'rna': {'X': 'X'}, 'atac': {'obsm': 'X_atac'}}
+print(keys)
 ```
 
 ### CLI helper
-
-Produce a single scenario and optional config template:
 
 ```bash
 conda activate REMADOM
@@ -75,22 +73,19 @@ python scripts/make_mock_multimodal.py \
 
 ### Batch generator
 
-Generate all six scenarios + configs in one shot:
-
 ```bash
 chmod +x scripts/generate_all_mock_data.sh
 ./scripts/generate_all_mock_data.sh
 ```
-
 Outputs land in `examples/mock/*.h5ad` and `configs/examples/mock_*.yaml`.
 
 ## Validation hooks
 
 - Unit test: `tests/unit/test_mock_generator.py` checks masks, shapes, and scenario coverage.
-- Integration test: `tests/integration/test_phase1_training.py` retrains the Mosaic VAE on the synthetic bridge/mosaic datasets to ensure forward/backward passes succeed.
+- Integration test: `tests/integration/test_phase1_training.py` trains on bridge/mosaic datasets.
 
 ## Customisation tips
 
-- Adjust cell/feature counts via CLI flags (`--cells`, `--genes`, `--peaks`, `--proteins`).
-- Modify scenario ratios (e.g., bridge percentage) by editing `remadom/data/mock.py`.
-- To capture the “fully paired” ground truth separately, call the API once with `problem_type="paired"` and reuse that `.h5ad` before applying scenario-specific masks.
+- Adjust cell/feature counts via CLI flags.
+- Modify scenario ratios（桥接占比、随机缺失比例等）通过编辑 `remadom/data/mock.py`。
+- 若想保留“完整配对真值”，可先生成 `problem_type="paired"` 的数据，再在内存中手动打掩码。

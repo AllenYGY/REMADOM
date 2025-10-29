@@ -75,3 +75,11 @@ optim:
 logging:
   run_dir: runs/m8_demo
   log_interval: 100
+```
+
+## Docs overview
+
+- `docs/network_architecture.md`: explains MosaicVAE, PoE fusion, modality-specific decoders, loss terms, and how different problem types map onto the same backbone.
+- `docs/mock_data.md`: details the synthetic data generator covering paired/unpaired/bridge/mosaic/prediction/hierarchical scenarios, with CLI examples and batch scripts.
+- `docs/problem_types.md`: summary table for each problem type, expected masks, training goals, and configuration hints.
+- `docs/phase1_plan.md`: Phase 1 deliverables and status; Phase 1 now includes encoders/decoders, data loaders, trainer, config factories, tests, and mock data scripts.

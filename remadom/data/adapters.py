@@ -36,7 +36,7 @@ def align_features(adata, registry: Dict[str, Any]) -> Tuple[Optional[np.ndarray
         Xa = adata.layers["X_atac"].toarray() if hasattr(adata.layers["X_atac"], "toarray") else adata.layers["X_atac"]
         X_atac = np.asarray(Xa)[:, aligned] if len(aligned) > 0 else None
 
-    if "adt" in registry and "X_adt" in adata.obsm_keys():
+    if "adt" in registry and "X_adt" in adata.obsm:
         vocab_cur = list(adata.uns.get("adt_names", []))
         vocab_reg = registry["adt"]
         aligned = [vocab_cur.index(p) for p in vocab_reg if p in set(vocab_cur)]

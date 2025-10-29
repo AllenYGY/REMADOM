@@ -39,7 +39,7 @@ def _as_modality_key(cfg: ModalityKeyConfig | Dict[str, object]) -> ModalityKeyC
 
 def _extract_matrix(adata, mk: ModalityKeyConfig):
     if mk.obsm:
-        if mk.obsm not in adata.obsm_keys():
+        if mk.obsm not in adata.obsm:
             raise KeyError(f"obsm key '{mk.obsm}' not found in AnnData")
         return adata.obsm[mk.obsm]
     X_key = mk.X or "X"
