@@ -16,3 +16,4 @@ tmp_bridge*.h5ad
 tmp_mosaic*.h5ad
 __pycache__/
 logs/
+conversation.md
