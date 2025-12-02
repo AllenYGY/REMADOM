@@ -18,3 +18,4 @@ class Batch:
     coords: Optional[torch.Tensor] = None
     modality_masks: Optional[Dict[str, torch.Tensor]] = None
     meta: Optional[Dict[str, Any]] = None
+    indices: Optional[torch.Tensor] = None

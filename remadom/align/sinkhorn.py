@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Dict, Any, Optional, Tuple
+from typing import Any, Dict, Optional
 import torch
 from torch import Tensor
 from .base import AlignmentHead
@@ -15,6 +15,7 @@ class SinkhornHead(AlignmentHead):
         self.solver = OtSolver(epsilon=self.epsilon)
 
     def set_params(self, **kwargs) -> None:
+        super().set_params(**kwargs)
         if "epsilon" in kwargs:
             self.epsilon = float(kwargs["epsilon"])
             self.solver = OtSolver(epsilon=self.epsilon)
@@ -31,11 +32,25 @@ class SinkhornHead(AlignmentHead):
         uniq = torch.unique(groups)
         if uniq.numel() < 2:
             return torch.tensor(0.0, device=z_bio.device), {}
-        a = z_bio[groups == uniq[0]]
-        b = z_bio[groups == uniq[1]]
-        C = pairwise_cost(a, b, self.metric)
-        mu = torch.full((a.shape[0],), 1.0 / max(1, a.shape[0]), device=z_bio.device)
-        nu = torch.full((b.shape[0],), 1.0 / max(1, b.shape[0]), device=z_bio.device)
-        P, logs = self.solver.solve(C, mu, nu)
-        cost = (C * P).sum()
-        return self.weight * cost, {"ot_cost": float(cost.detach().cpu()), **logs, "epsilon": self.epsilon}
+
+        total_cost = torch.tensor(0.0, device=z_bio.device)
+        pair_logs: Dict[str, Any] = {"pairs": 0, "epsilon": self.epsilon}
+
+        for i in range(len(uniq)):
+            for j in range(i + 1, len(uniq)):
+                a = z_bio[groups == uniq[i]]
+                b = z_bio[groups == uniq[j]]
+                if a.numel() == 0 or b.numel() == 0:
+                    continue
+                C = pairwise_cost(a, b, self.metric)
+                mu = torch.full((a.shape[0],), 1.0 / max(1, a.shape[0]), device=z_bio.device)
+                nu = torch.full((b.shape[0],), 1.0 / max(1, b.shape[0]), device=z_bio.device)
+                P, logs = self.solver.solve(C, mu, nu)
+                cost = (C * P).sum()
+                total_cost = total_cost + cost
+                pair_logs["pairs"] += 1
+        if pair_logs["pairs"] == 0:
+            return torch.tensor(0.0, device=z_bio.device), pair_logs
+        avg_cost = total_cost / pair_logs["pairs"]
+        pair_logs["ot_cost"] = float(avg_cost.detach().cpu())
+        return self.weight * avg_cost, pair_logs

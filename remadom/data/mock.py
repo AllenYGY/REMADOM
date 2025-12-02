@@ -164,6 +164,11 @@ def generate_mock_dataset(
     rna = _generate_rna(z, n_genes, rng)
     atac = _generate_atac(z, n_peaks, rng)
     adt = _generate_adt(z, n_proteins, rng)
+    truth = {
+        "rna": rna.copy(),
+        "atac": atac.copy(),
+        "adt": adt.copy(),
+    }
 
     for mod, data in [("rna", rna), ("atac", atac), ("adt", adt)]:
         mask = masks.get(mod)
@@ -185,10 +190,13 @@ def generate_mock_dataset(
     var = pd.DataFrame(index=[f"gene_{i}" for i in range(rna.shape[1])])
     adata = ad.AnnData(rna, obs=obs, var=var)
     adata.layers["counts"] = rna.astype(np.float32)
+    adata.layers["truth_rna"] = truth["rna"].astype(np.float32)
     if masks["atac"].any():
         adata.obsm["X_atac"] = atac
+        adata.obsm["truth_atac"] = truth["atac"].astype(np.float32)
     if masks["adt"].any():
         adata.obsm["X_adt"] = adt
+        adata.obsm["truth_adt"] = truth["adt"].astype(np.float32)
         adata.uns["adt_names"] = [f"protein_{i}" for i in range(adt.shape[1])]
 
     keys: Dict[str, Dict[str, str]] = {}

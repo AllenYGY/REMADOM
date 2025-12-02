@@ -81,7 +81,29 @@ Version: M8.1
 - Network design overview: refer to `docs/network_architecture.md` for a full description of modules, data flow, modalities, and loss structure.
 - Problem type cheat sheet: `docs/problem_types.md` summarises masks, goals, and configuration hints for paired/unpaired/bridge/mosaic/prediction/hierarchical scenarios.
 
-### 5.1) Phase 1 mock workflow
+### 5.0) Phase status
+
+- **Phase 1 – Core Mosaic Backbone:** ✅ complete (encoders/decoders, masked ELBO, dataloaders, trainer, mock data, CLI).
+- **Phase 2 – Alignment & Bridge Integration:** ✅ complete (MNN/Seeded/Dictionary/Linear map bridges, schedules/diagnostics, CLI artefacts, docs/tests).
+
+### 5.1) Outstanding Phase 2 follow-ups (per mock case)
+
+- **mock_paired (Problem Type 1):** add paired reconstruction + cross-modal prediction metrics (per-modality RMSE/Pearson, imputation scatter), emit into `metrics.final.json`/plots, and document baseline expectations.
+- **mock_unpaired (Problem Type 2):** enable at least one alignment head (MMD/GW) + evaluation step that checks RNA↔ATAC imputation or latent alignment quality (e.g., silhouette/batch variance).
+- **mock_bridge (Problem Type 3):** extend bridge diagnostics with downstream quality checks—e.g., compute imputation accuracy on single-modality cohorts before/after bridge loss, assert non-zero edge counts across providers.
+- **mock_mosaic (Problem Type 4):** implement mosaic masking stress tests (varying missing-rate schedules) and measure reconstruction/imputation against known ground truth; add batch-effect metrics when multiple cohorts exist.
+- **mock_prediction:** create a held-out-target evaluation loop that predicts the missing modality and reports correlation/NRMSE; surface CLI command to export predicted matrices for inspection.
+- **mock_hierarchical:** integrate hierarchical alignment components (graph or multi-level heads) plus quantitative batch-effect diagnostics that confirm per-study harmonisation.
+
+### 5.2) Phase 3 outlook
+
+- **Graph-regularised & temporal heads:** finish Laplacian/temporal adapters originally sketched for Phase 2 and wire them into configs/tests.
+- **Evaluation harness:** ship reusable scripts/notebooks that compute SCIB-like metrics, cross-modal imputation scores, and bridge diagnostics for any run.
+- **Adapters & reference mapping:** expose `remadom/adapters` via CLI (mapref, arches, mixtures) so external references can be injected, with smoke tests and docs.
+- **Scalability polish:** upgrade AMP (torch.amp APIs), add CPU fallbacks, and profile dataloaders/checkpointing on >1e6 cells.
+- **Phase 3 plan:** draft a dedicated roadmap once the outstanding Phase 2 follow-ups land to avoid scope creep.
+
+### 5.3) Phase 1 mock workflow
 
 - Generate synthetic data covering any problem type with the helper script:
   - `python scripts/make_mock_multimodal.py --problem mosaic --out examples/mock/mock_mosaic_multiome.h5ad --config-out configs/examples/mock_mosaic.yaml`

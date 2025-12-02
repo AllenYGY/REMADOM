@@ -71,6 +71,8 @@ python scripts/make_mock_multimodal.py \
   --cells 600 --genes 2000 --peaks 60000 --proteins 30 --seed 0
 ```
 
+Running `python -m remadom.cli.train --cfg configs/examples/mock_bridge.yaml` now produces both the training history and summarised metrics (`metrics.final.json`, plus `bridge_metrics.json` when the bridge head is enabled).
+
 ### Batch generator
 
 ```bash
@@ -83,6 +85,7 @@ Outputs land in `examples/mock/*.h5ad` and `configs/examples/mock_*.yaml`.
 
 - Unit test: `tests/unit/test_mock_generator.py` checks masks, shapes, and scenario coverage.
 - Integration test: `tests/integration/test_phase1_training.py` trains on bridge/mosaic datasets.
+- Bridge head sanity check: `tests/unit/test_bridge_head.py` ensures the MNN bridge constructs edges and returns finite penalties.
 
 ## Customisation tips
 

@@ -1,87 +1,61 @@
-# REMADOM
+# REMADOM 简介
 
-- **配对多模态整合 (Paired)**：在**同一些细胞**中同时测量多种模态的数据。
-- **非配对多模态整合 (Unpaired)**：在**不同细胞群体**中分别测量不同的模态。
-- **桥接整合 (Bridge)**：用一小部分**同时拥有多种模态**的“桥梁”细胞来连接两个大规模的**单模态**数据集。
-- **马赛克整合 (Mosaic)**：在同一个数据集中，**每个细胞可能拥有任意不同**的模态组合，数据呈不规则缺失。
-- **跨模态预测 (Prediction)**：利用一种模态的数据来**预测**另一种难以测量或昂贵的模态的数据。
-- **分层多模态整合 (Hierarchical)**：整合来自**多个不同研究**（不同实验室、组织、条件）的异构数据集。
+REMADOM 是一个面向单细胞多模态整合的统一框架，支持以下典型场景：
 
-|**问题类型 (Problem Type)**|**一句话描述**|**场景描述**|**输入数据**|**目标与输出**|**核心挑战与方法**|
+- **配对 (Paired)**：同一批细胞同时测量多种模态，如 CITE-seq、Multiome。
+- **非配对 (Unpaired)**：不同细胞群分别测量不同模态，如 RNA-only vs. ATAC-only。
+- **桥接 (Bridge)**：少量“桥梁”细胞拥有多模态，用来连接两个大规模的单模态数据集。
+- **马赛克 (Mosaic)**：同一数据集中，每个细胞拥有的模态组合随意缺失。
+- **预测 (Prediction)**：用一种模态推断另一种难测模态，如 RNA→ATAC 预测。
+- **分层 (Hierarchical)**：跨多个研究/实验/组织的异构数据集，需要分层对齐。
+
+|**Problem Type**|**Core idea**|**Typical scenario**|**Input**|**Goal**|**Challenges / Methods**|
 |---|---|---|---|---|---|
-|**1. 配对 (Paired)**|在**同一些细胞**中同时测量多种模态的数据。|CITE-seq (同时测量RNA和表面蛋白) 或 Multiome (同时测量RNA和ATAC-seq)。|一个数据集，其中每个细胞都拥有多种模态的测量值。|• 联合嵌入<br><br>• 细胞类型分配<br><br>• 数据去噪/插补|• 直接关系 (如RNA-蛋白): 使用联合概率模型，如 totalVI。<br><br>• 间接关系 (如RNA-ATAC): 需要更灵活的模型，如 MultiVI、矩阵分解 (MOFA+, LIGER) 或图方法 (WNN)。|
-|**2. 非配对 (Unpaired)**|在**不同细胞群体**中分别测量不同的模态。|不同实验室对同种组织分别进行单细胞RNA测序和ATAC测序。|每个模态对应一个独立的数据集，数据集之间没有重叠的细胞。|• 对齐的嵌入<br><br>• 对应矩阵<br><br>• 转换函数|• 无共享特征: 使用最优传输 (Optimal Transport)，如 MOSAIC。<br><br>• 有先验知识: 使用图论方法，如 GLUE0。<br><br>• 对抗性对齐: 如 bindSC1。|
-|**3. 桥接 (Bridge)**|用一小部分**同时拥有多种模态**的“桥梁”细胞来连接两个大规模的**单模态**数据集。|对少量细胞进行昂贵的多模态测量，同时对更多细胞进行便宜的单模态测量。|两个大规模单模态数据集 (A, B) 和一个小规模配对数据集 (A+B)。|• 统一嵌入<br><br>• 跨模态插补|在桥接数据上学习模态间的映射关系，并将其推广到大规模数据上。代表方法有 `Seurat v5` 和 `UINMF`。|
-|**4. 马赛克 (Mosaic)**|在同一个数据集中，**每个细胞可能拥有任意不同**的模态组合，数据呈不规则缺失。|在大型图谱项目中，由于技术失败或质控过滤，导致数据呈“马赛克”状缺失。|一个“不规则”的数据集，其中每个细胞的可用模态集合都可能不同。|• 联合嵌入<br><br>• 数据补全（并提供不确定性估计）|方法必须能灵活处理任意的模态组合9。代表方法有 `MultiVI`、`MIDAS` 和 `StabMap`。|
-|重点是预测的准确性和模型的可解释性。代表方法有 `sciPENN` (使用注意力机制) 和 `BABEL` (使用循环一致性)。|
-|**6. 分层 (Hierarchical)**|整合来自**多个不同研究**（不同实验室、组织、条件）的异构数据集。|构建一个跨越多个独立研究的综合细胞图谱。|一系列异构的数据集，每个都有自己的批次、模态组合和细胞类型构成。|• 全局嵌入<br><br>• 分层因子分解<br><br>• 结构化细胞类型对齐|模拟数据的多层次结构。代表方法有 `LIGER` (分层矩阵分解) 和 `scMerge2` (分层聚类)。|
+|Paired|Same cells have multiple modalities|CITE-seq, Multiome|Single dataset with all modalities per cell|Joint embedding, denoising, imputation|totalVI, MultiVI, MOFA+, LIGER, WNN|
+|Unpaired|Different cohorts measure different modalities|RNA-only vs ATAC-only cohorts|Separate datasets per modality|Aligned embedding, match function|Optimal transport (MOSAIC), graph methods (GLUE), adversarial alignment (bindSC)|
+|Bridge|Few multi-modal “bridge” cells connect large single-modal cohorts|Small paired subset, large single-modal sets|Dataset A, dataset B, plus small A+B bridge|Unified embedding, cross-modal completion|Use bridge subset to learn mapping (Seurat v5, UINMF) and generalize|
+|Mosaic|Each cell may have arbitrary modality combinations|Large atlas with missing modalities|Single dataset with irregular masks|Joint embedding, completion with uncertainty|Must handle arbitrary missingness (MultiVI, MIDAS, StabMap)|
+|Prediction|One modality available, predict another|Predict ATAC from RNA|Paired training set, single-modality inference set|Cross-modal prediction|Accuracy + interpretability (sciPENN, BABEL)|
+|Hierarchical|Heterogeneous studies, labs, tissues|Large atlas spanning multiple studies|Multiple datasets with different modality mixes|Global embedding + structured alignment|Hierarchical factorization (LIGER) or clustering (scMerge2)|
 
-`remadom` 被设计成一个统一、模块化、可扩展且以性能为先的 Python 软件框架，用于单细胞多组学数据的整合与生成式建模。其核心架构由以下几个关键部分组成：
+`remadom` 是一个统一、模块化、易扩展的多组学整合框架，主要特点包括：
 
-1. **统一的“马赛克优先”骨干 (Mosaic-first Backbone)**：
+1. **Mosaic-first 骨干**：核心模型 `REMADOM` 通过 Masked ELBO 支持任意模态缺失，PoE 融合多模态潜向量。
+2. **模块化组件**：不同模态有专属 Encoder/Decoder；Alignment/Bridge/Graph 等“头”可按需启用，增加额外约束或损失。
+3. **配置驱动**：所有行为由单一 YAML 控制，切换桥接/对齐策略无需改代码。
+4. **高效 I/O 与训练**：兼容 AnnData/NPY/CSR/Zarr，多进程加载、Manifest 管理；训练支持 AMP、梯度裁剪、调度、早停、断点续训。
 
-    - **核心模型**：`MosaicVAE`，一个变分自编码器（VAE），是整个框架的中心。
+### 统一视角：用 Mosaic 视角覆盖所有 Problem Types
 
-    - **核心机制**：它不假设任何细胞都拥有所有模态的数据，而是通过**带掩码的 ELBO (Masked ELBO)** 损失函数进行训练。这意味着对于每个细胞，损失函数只计算该细胞**实际拥有**的模态的重构误差，从而天然地支持任意的数据缺失模式（即马赛克数据）。
+| Problem | 视作的 Mosaic 场景 | 配置要点 |
+|---------|-------------------|----------|
+| Paired  | 无缺失，全模态 | Masked ELBO=常规 ELBO，PoE 融合所有模态 |
+| Unpaired| 模态互斥的多 cohort | 启用 MMD/Sinkhorn/GW 等对齐头对齐 $z_{bio}$ |
+| Bridge  | 部分配对 + 大量单模态 | Masked ELBO + PoE 处理混合，BridgeHead 明确拉近 |
+| Mosaic  | 任意缺失 | Masked ELBO 原生支持，可按需调权重 |
+| Prediction| 训练配对、预测缺失 | 训练照常；预测时只编码可用模态再解码 |
+| Hierarchical | 多模态 + 多来源 | 分离 $z_{bio}/z_{tech}$，多 dataset 对齐 + Masked ELBO |
 
-2. **模块化的组件与可插拔的“头” (Heads)**：
+总结：REMADOM 以一个灵活的 Mosaic 骨干为基，辅以可插拔的对齐/桥接组件，就能把不同整合需求都映射到同一训练管线，既减少了重复造轮子，也为未来更复杂的整合任务留下了扩展空间。
 
-    - **编码器/解码器 (Encoders/Decoders)**：为每种数据模态（如 RNA、ATAC、ADT、甲基化）提供专属的、符合其数据特性的编码器和解码器。例如，为 RNA 使用 ZINB 解码器，为 ATAC 使用伯努利解码器，为蛋白质（ADT）提供泊松混合或高斯解码器选项。
-
-    - **潜变量融合 (Latent Fusion)**：对于拥有多种模态的细胞，使用**专家乘积 (Product-of-Experts, PoE)** 机制来融合来自不同模态的信息，生成一个统一且更精确的生物学潜变量 `z_bio`。
-
-    - **对齐头 (Alignment Heads)**：这是一系列可插拔的模块，作为额外的损失函数，用于在`z_bio`空间中对齐不同批次或不同模态的细胞分布888。我们已经规划了多种“头”，包括：
-
-        - **基于分布的**：`MMDHead`、`SinkhornHead`（最优传输）、`GWHead`（Gromov-Wasserstein）。
-
-        - **基于桥接的**：`CrossGraphHead`，利用 MNN（相互最近邻）等桥接信号构建的图进行对齐。
-
-        - **基于结构的**：`GraphRegularizer`（图拉普拉斯正则化）和 `TemporalHead`（时序约束）。
+- **对齐头 (Alignment Heads)**：这是一系列可插拔的模块，作为额外的损失函数，用于在$z_{bio}$空间中对齐不同批次或不同模态的细胞分布。我们已经规划了多种“头”，包括：
+- **基于分布的**：`MMDHead`、`SinkhornHead`（最优传输）、`GWHead`（Gromov-Wasserstein）。
+- **基于桥接的**：`CrossGraphHead`，利用 MNN（相互最近邻）等桥接信号构建的图进行对齐。
+- **基于结构的**：`GraphRegularizer`（图拉普拉斯正则化）和 `TemporalHead`（时序约束）。
 
 3. **中心化的配置驱动 (Configuration-Driven)**：
 
     - 整个程序的行为由一个**单一的 YAML 配置文件**驱动。用户通过开关和调整配置项（如启用哪个对齐头、设置权重、选择学习率调度策略等）来解决不同的整合问题，而无需修改代码。
 
-4. **高效的数据I/O与训练流程**：
+### 统一配置：把不同 Problem Types 映射成 Mosaic 特例
 
-    - 支持多种数据后端，包括内存中的 AnnData、磁盘上的 NPY/CSR/Zarr 格式，并通过**数据清单 (Manifest)** 文件进行管理，以支持大规模数据集和多进程数据加载 。
+| Problem | 视作的 Mosaic 场景 | 配置思路 |
+|---------|-------------------|----------|
+| Paired  | 无缺失 | Masked ELBO=常规 ELBO，PoE 融合所有模态 |
+| Unpaired| 模态互斥 | 启用 MMD/Sinkhorn/GW 等对齐头对齐 $z_{bio}$ |
+| Bridge  | 少量配对 + 单模态 | Masked ELBO+PoE 处理混合，BridgeHead/bridge providers 显式拉近 |
+| Mosaic  | 任意缺失 | Masked ELBO 原生支持，可设置模态权重 |
+| Prediction| 训练配对、推理缺失 | 训练照常；推理时只编码可用模态再解码 |
+| Hierarchical | 多模态 + 多来源 | 解耦 $z_{bio}/z_{tech}$，多 dataset 对齐，Masked ELBO 负责各自缺失 |
 
-    - 训练器（`Trainer`）集成了现代训练技术，如混合精度（AMP）、梯度裁剪、学习率调度、早停和检查点续训。
-
-### **如何实现统一整合？**
-
-`remadom` 的核心创新在于，它将最复杂的**马赛克整合 (Mosaic Integration)** 作为通用模型，然后通过施加不同的**配置约束**，将所有其他看似不同的问题类型（Problem Types）都视为该模型的**特殊情况**，从而实现统一整合。
-
-以下是具体实现方式：
-
-- **配对整合 (Paired Integration) 的统一**：
-
-    - **视为**：一个**没有任何数据缺失**的马赛克场景6。
-
-    - **实现**：`Masked ELBO` 的行为等同于标准多模态 VAE；`Product-of-Experts` 会被激活以融合所有配对模态的信息8；通常不需要额外的跨模态对齐头9。
-
-- **非配对整合 (Unpaired Integration) 的统一**：
-
-    - **视为**：一个**模态完全互斥**的马赛克场景，即拥有模态 A 的细胞集和拥有模态 B 的细胞集没有交集。
-
-    - **实现**：`Masked ELBO` 在各细胞集上独立工作。核心在于**激活跨模态的对齐头**（如 `GWHead` 或 `SinkhornHead`），强制不同模态的细胞在 `z_bio` 空间中的分布或几何结构保持一致，从而实现对齐。
-
-- **桥接整合 (Bridge Integration) 的统一**：
-
-    - **视为**：一个**部分数据配对**的马赛克场景，混合了“配对”细胞和“单模态”细胞。
-
-    - **实现**：`Masked ELBO` 和 `PoE` 天然地处理了这种混合情况。模型在桥接细胞上隐式学习模态间的映射关系，并自动泛化到单模态细胞上。同时，我们还规划了如 `BridgeDictionary` 等模块来学习显式的映射作为额外的正则项4。
-
-- **跨模态预测 (Cross-Modal Prediction) 的统一**：
-
-    - **视为**：一个**训练时配对，预测时目标模态完全缺失**的马赛克场景。
-
-    - **实现**：在配对数据上正常训练模型。预测时，仅使用源模态的编码器生成 `z_bio`，然后将其输入到目标模态的解码器中生成预测值。这由 `impute()` 方法支持。
-
-- **分层整合 (Hierarchical Integration) 的统一**：
-
-    - **视为**：一个在**模态**和**数据集来源**两个维度上都存在差异的复杂马赛克场景。
-
-    - **实现**：通过 `z_bio` 和 `z_tech` 的解耦来分离生物信号和技术噪声。`AlignmentHead` 被配置为对齐**所有不同数据集**在 `z_bio` 空间中的分布，而 `Masked ELBO` 则负责处理每个数据集内部的**模态**缺失问题。
-
-**总结来说，`remadom` 框架通过一个通用且灵活的“马赛克”骨干网络，将所有整合任务的差异性都抽象并转移到了可配置的“头”和数据流中。这种设计不仅极大地统一了代码，降低了维护成本，也为解决未来可能出现的、更复杂的数据整合挑战提供了坚实的基础。**
+凭借这种“马赛克优先”的骨干，REMADOM 可以通过配置把看似不同的任务汇聚到同一训练管线，减少重复开发，也为更复杂的多模态整合留出扩展空间。

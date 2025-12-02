@@ -29,6 +29,15 @@ declare -A PROBLEMS=(
   [hierarchical]="mock_hierarchical_multistudy.h5ad"
 )
 
+declare -A EVAL_TASKS=(
+  [paired]="paired_imputation"
+  [unpaired]="unpaired_imputation"
+  [bridge]="bridge_imputation"
+  [mosaic]="mosaic_imputation"
+  [prediction]="prediction_accuracy"
+  [hierarchical]="hierarchical_alignment"
+)
+
 for problem in "${!PROBLEMS[@]}"; do
   out_file="${OUT_DIR}/${PROBLEMS[$problem]}"
   cfg_file="${CFG_DIR}/mock_${problem}.yaml"
@@ -42,6 +51,23 @@ for problem in "${!PROBLEMS[@]}"; do
     --genes 1000 \
     --peaks 5000 \
     --proteins 30
+
+  task="${EVAL_TASKS[$problem]:-}"
+  if [[ -n "${task}" ]]; then
+    python - <<PY
+import pathlib
+import yaml
+cfg_path = pathlib.Path("${cfg_file}")
+with cfg_path.open("r", encoding="utf-8") as fh:
+    data = yaml.safe_load(fh)
+data.setdefault("evaluation", {})
+data["evaluation"]["enabled"] = True
+data["evaluation"]["tasks"] = ["${task}"]
+data["evaluation"]["save_predictions"] = True
+with cfg_path.open("w", encoding="utf-8") as fh:
+    yaml.safe_dump(data, fh, sort_keys=False)
+PY
+  fi
 done
 
 echo "[remadom] mock datasets ready in ${OUT_DIR}"

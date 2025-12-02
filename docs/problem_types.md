@@ -28,7 +28,20 @@ This note revisits the six canonical scenarios, summarising data assumptions, tr
 - **Goal:** use the bridge to transfer information between single-modality cohorts and recover missing modalities.
 - **Training setup:**
   - Data: same AnnData with masks; bridge cells have multiple `has_<mod>` set to `True`.
-  - Config: optionally enable bridge-specific heads (e.g., MNN-based) and alignment terms to reinforce the bridge constraints (see `docs/bridge_mnn.md`).
+  - Config: enable the bridge head in Phase 2 via the top-level `bridge` block, for example:
+
+    ```yaml
+    bridge:
+      enabled: true
+      method: mnn
+      group_key: dataset   # or "batch" depending on cohort labels
+      weight: 0.5
+      params:
+        k: 10
+    ```
+
+    Schedules warm up the bridge weight (`bridge.schedule`), and detailed diagnostics are written to `bridge_metrics.json` alongside the usual `metrics.final.json` summary.
+  - Loss: masked recon terms handle each modality separately; bridge penalties encourage paired cohorts to meet in latent space.
 - **Mock data:** `problem=bridge`.
 
 ## 4. Mosaic
@@ -37,7 +50,7 @@ This note revisits the six canonical scenarios, summarising data assumptions, tr
 - **Goal:** learn a robust shared latent space and impute missing modalities while respecting uncertainty.
 - **Training setup:**
   - Data: `has_<mod>` masks vary per cell.
-  - Config: alignment heads optional; masked ELBO naturally handles arbitrary patterns.
+  - Config: alignment heads optional; masked ELBO naturally handles arbitrary patterns. Bridge heads can coexist with mosaic masking when small paired subsets exist within the mosaic mix.
 - **Mock data:** `problem=mosaic`.
 
 ## 5. Prediction
@@ -64,3 +77,4 @@ This note revisits the six canonical scenarios, summarising data assumptions, tr
 - **Alignment heads:** (MMD, Sinkhorn, GW, etc.) can be toggled in YAML for any problem type to remove batch effects or improve cross-domain alignment.
 - **Adapters/bridges:** advanced modules (`remadom/adapters`, `remadom/bridges`) extend Phase 1 for reference mapping or explicit bridge constraints.
 - **Mock generator:** see `docs/mock_data.md` for CLI examples and dataset generation scripts.
+- **CLI artefacts:** `metrics.final.json` records the last-epoch train/val snapshot, while `bridge_metrics.json` (when applicable) captures bridge edge diagnostics.

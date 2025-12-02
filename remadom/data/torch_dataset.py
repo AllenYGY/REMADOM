@@ -66,6 +66,7 @@ class AnnDataDataset(Dataset):
         self.lazy = lazy
         self._dense_cache_mods = set(dense_cache_mods or [])
         self._batches = adata.obs[batch_key].values if batch_key in adata.obs.columns else np.zeros(adata.n_obs, dtype=int)
+        self._datasets = adata.obs["dataset"].values if "dataset" in adata.obs.columns else self._batches
 
         # For each modality, store handle and column indices aligned to registry
         self._handles: Dict[str, Any] = {}
@@ -150,6 +151,8 @@ class AnnDataDataset(Dataset):
                 flag = xt.numel() > 0
             item[f"has_{mod}"] = torch.tensor(flag, dtype=torch.bool)
         item["batch_labels"] = torch.tensor(int(self._batches[i]), dtype=torch.long)
+        item["dataset_labels"] = torch.tensor(int(self._datasets[i]), dtype=torch.long)
+        item["indices"] = torch.tensor(i, dtype=torch.long)
         return item
 
 def batch_collate(items: List[Dict[str, Any]]):
@@ -167,8 +170,11 @@ def batch_collate(items: List[Dict[str, Any]]):
     has_adt = stack_field("has", "adt")
     lib = x_rna.sum(1) if x_rna is not None else None
     batches = torch.stack([it["batch_labels"] for it in items], 0) if "batch_labels" in items[0] else None
+    datasets = torch.stack([it["dataset_labels"] for it in items], 0) if "dataset_labels" in items[0] else None
+    indices = torch.stack([it["indices"] for it in items], 0) if "indices" in items[0] else None
     return Batch(
         x_rna=x_rna, x_atac=x_atac, x_adt=x_adt,
         has_rna=has_rna, has_atac=has_atac, has_adt=has_adt,
-        libsize_rna=lib, batch_labels=batches
+        libsize_rna=lib, batch_labels=batches, dataset_labels=datasets,
+        indices=indices
     )

@@ -46,9 +46,24 @@ def build_schedule(cfg, default: float, epochs: int):
     kind = data.get("kind", "linear")
     start = float(data.get("start", default))
     end = float(data.get("end", default))
-    T = int(data.get("epochs", epochs))
+    T_raw = data.get("epochs", epochs)
+    T = int(T_raw) if T_raw is not None else int(epochs)
+    mode = data.get("mode", "epoch")
+
     if kind == "cosine":
         return start, cosine_schedule(start, end, T)
+    if kind == "piecewise":
+        points = data.get("points") or []
+        return start, _piecewise_schedule(points, default=start, total=T)
+    if kind == "step":
+        gamma = float(data.get("gamma", 0.5))
+        step_size = int(data.get("step_size", max(1, T // 3)))
+        return start, _step_schedule(start, gamma, step_size)
+    if kind == "cosine_restart":
+        cycles = int(data.get("cycles", 1))
+        return start, _cosine_restart_schedule(start, end, T, cycles)
+    if mode == "step":
+        return start, _per_step_linear(start, end, T)
     return start, linear_schedule(start, end, T)
 
 
@@ -71,6 +86,66 @@ def build_modality_weight_schedules(decoder_cfg: Mapping[str, object], epochs: i
             )
         schedules[mod] = (float(start), fn)
     return dict(schedules)
+
+
+def _piecewise_schedule(points, default: float, total: int) -> Callable[[int], float]:
+    if not points:
+        return linear_schedule(default, default, total)
+    knots = []
+    for item in points:
+        if isinstance(item, (list, tuple)) and len(item) == 2:
+            t, v = item
+            knots.append((int(t), float(v)))
+    knots.sort(key=lambda x: x[0])
+
+    def fn(t: int) -> float:
+        if not knots:
+            return default
+        if t <= knots[0][0]:
+            return knots[0][1]
+        for i in range(len(knots) - 1):
+            t0, v0 = knots[i]
+            t1, v1 = knots[i + 1]
+            if t0 <= t <= t1:
+                if t1 == t0:
+                    return v1
+                alpha = (t - t0) / (t1 - t0)
+                return (1 - alpha) * v0 + alpha * v1
+        return knots[-1][1]
+
+    return fn
+
+
+def _step_schedule(start: float, gamma: float, step_size: int) -> Callable[[int], float]:
+    step_size = max(1, int(step_size))
+
+    def fn(t: int) -> float:
+        steps = max(0, t // step_size)
+        return float(start) * (gamma ** steps)
+
+    return fn
+
+
+def _cosine_restart_schedule(start: float, end: float, total: int, cycles: int) -> Callable[[int], float]:
+    total = max(1, int(total))
+    cycles = max(1, int(cycles))
+    cycle_length = max(1, total // cycles)
+
+    def fn(t: int) -> float:
+        current = t % cycle_length
+        return float(end) + (float(start) - float(end)) * 0.5 * (1 + math.cos(math.pi * current / cycle_length))
+
+    return fn
+
+
+def _per_step_linear(start: float, end: float, steps: int) -> Callable[[int], float]:
+    steps = max(1, int(steps))
+
+    def fn(step: int) -> float:
+        alpha = min(max(step, 0), steps) / steps
+        return (1 - alpha) * float(start) + alpha * float(end)
+
+    return fn
 
 
 class WarmupCosine:

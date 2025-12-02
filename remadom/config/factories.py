@@ -10,6 +10,7 @@ from ..align.base import AlignmentHead
 from ..align.gw import GWHead
 from ..align.mmd import MMDHead
 from ..align.sinkhorn import SinkhornHead
+from ..adapters.bridge_head import BridgeHead, build_bridge_provider
 from ..core.vae import MosaicVAE
 from ..utils.schedules import (
     build_beta_schedule,
@@ -59,6 +60,7 @@ def build_heads(cfg: ExperimentConfig) -> List[AlignmentHead]:
             SinkhornHead(
                 weight=cfg.alignment.ot.weight,
                 epsilon=cfg.alignment.ot.epsilon,
+                group_key=cfg.alignment.ot.group_key,
             )
         )
     if cfg.alignment.gw.enabled:
@@ -67,30 +69,65 @@ def build_heads(cfg: ExperimentConfig) -> List[AlignmentHead]:
                 weight=cfg.alignment.gw.weight,
                 epsilon=cfg.alignment.gw.epsilon,
                 fused_alpha=cfg.alignment.gw.fused_alpha,
+                group_key=cfg.alignment.gw.group_key,
+            )
+        )
+    if cfg.bridge.enabled:
+        bridge_params = dict(cfg.bridge.params)
+        normalize = bool(bridge_params.pop("normalize", cfg.bridge.normalize))
+        max_edges = bridge_params.pop("max_edges", cfg.bridge.max_edges)
+        allowed_groups = bridge_params.pop("allowed_groups", cfg.bridge.allowed_groups)
+        provider = build_bridge_provider(cfg.bridge.method, bridge_params)
+        heads.append(
+            BridgeHead(
+                provider=provider,
+                weight=cfg.bridge.weight,
+                group_key=cfg.bridge.group_key,
+                name=f"bridge.{cfg.bridge.method}",
+                pairs=cfg.bridge.pairs,
+                normalize=normalize,
+                max_edges=max_edges,
+                allowed_groups=allowed_groups,
             )
         )
     return heads
 
 
-def apply_head_schedules(heads: Iterable[AlignmentHead], cfg: ExperimentConfig) -> List[Tuple[AlignmentHead, Optional[Callable[[int], float]]]]:
-    pairs: List[Tuple[AlignmentHead, Optional[Callable[[int], float]]]] = []
+ScheduleBinding = Optional[Tuple[str, Callable[[int], float]]]
+
+
+def apply_head_schedules(heads: Iterable[AlignmentHead], cfg: ExperimentConfig) -> List[Tuple[AlignmentHead, ScheduleBinding]]:
+    bindings: List[Tuple[AlignmentHead, ScheduleBinding]] = []
     for head in heads:
-        sched_cfg = None
+        name = getattr(head, "name", "")
+        schedule_cfg = None
+        param_name = None
         default = None
-        if getattr(head, "name", None) == "sinkhorn" and cfg.alignment.ot.enabled:
-            sched_cfg = cfg.alignment.ot.schedule
+        if name == "sinkhorn" and cfg.alignment.ot.enabled:
+            schedule_cfg = cfg.alignment.ot.schedule
+            param_name = "epsilon"
             default = cfg.alignment.ot.epsilon
-        elif getattr(head, "name", None) == "gw" and cfg.alignment.gw.enabled:
-            sched_cfg = cfg.alignment.gw.schedule
+        elif name == "gw" and cfg.alignment.gw.enabled:
+            schedule_cfg = cfg.alignment.gw.schedule
+            param_name = "epsilon"
             default = cfg.alignment.gw.epsilon
-        if sched_cfg is not None:
-            start, fn = build_schedule(sched_cfg, default if default is not None else 0.05, cfg.optim.epochs)
-            if hasattr(head, "set_params"):
-                head.set_params(epsilon=start)
-            pairs.append((head, fn))
-        else:
-            pairs.append((head, None))
-    return pairs
+        elif name == "mmd" and cfg.alignment.mmd.enabled:
+            schedule_cfg = cfg.alignment.mmd.schedule
+            param_name = "weight"
+            default = cfg.alignment.mmd.weight
+        elif name.startswith("bridge") and cfg.bridge.enabled:
+            schedule_cfg = cfg.bridge.schedule
+            param_name = "weight"
+            default = cfg.bridge.weight
+
+        if schedule_cfg is None or param_name is None:
+            bindings.append((head, None))
+            continue
+
+        start, fn = build_schedule(schedule_cfg, default if default is not None else 0.0, cfg.optim.epochs)
+        head.set_params(**{param_name: start})
+        bindings.append((head, (param_name, fn)))
+    return bindings
 
 
 def build_optimizer(cfg: ExperimentConfig, model: torch.nn.Module) -> Tuple[Optimizer, Optional[LRScheduler]]:

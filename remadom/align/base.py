@@ -9,6 +9,10 @@ class AlignmentHead(nn.Module):
         self.weight = weight
         self.name = name
 
+    def set_params(self, **kwargs) -> None:  # pragma: no cover - optional override
+        if "weight" in kwargs:
+            self.weight = float(kwargs["weight"])
+
     def forward(
         self,
         z_bio: Tensor,

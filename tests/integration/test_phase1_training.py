@@ -6,6 +6,7 @@ import pytest
 
 from remadom.config.schema import (
     AmpConfig,
+    BridgeConfig,
     DataConfig,
     DataSource,
     DecoderConfig,
@@ -45,12 +46,17 @@ def test_phase1_training_smoke(tmp_path: Path, problem: str) -> None:
         encoders["adt"] = EncoderConfig(in_dim=adata.obsm["X_adt"].shape[1], hidden_dims=(64, 64))
         decoders["adt"] = DecoderConfig(out_dim=adata.obsm["X_adt"].shape[1], hidden_dims=(64, 64), library=False)
 
+    bridge_cfg = BridgeConfig()
+    if problem == "bridge":
+        bridge_cfg = BridgeConfig(enabled=True, method="mnn", weight=0.5, group_key="dataset")
+
     cfg = ExperimentConfig(
         data=DataConfig(
             source=DataSource(path=str(path), keys=keys, batch_key="batch"),
             valid=None,
         ),
         model=ModelConfig(latent_bio=8, encoders=encoders, decoders=decoders, beta=1.0),
+        bridge=bridge_cfg,
         optim=OptimConfig(
             epochs=2,
             batch_size=64,
@@ -83,5 +89,9 @@ def test_phase1_training_smoke(tmp_path: Path, problem: str) -> None:
 
     assert len(history["train"]) == cfg.optim.epochs
     assert trainer.best_state is None  # no val loader provided
-    last_loss = history["train"][-1]["loss"]
+    last_epoch = history["train"][-1]
+    last_loss = last_epoch["loss"]
     assert last_loss == pytest.approx(last_loss)  # finite
+    if problem == "bridge":
+        assert "bridge_mnn_loss" in last_epoch
+        assert last_epoch["bridge_mnn_bridge_edges"] >= 0

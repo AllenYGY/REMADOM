@@ -31,3 +31,17 @@ def compute_kbet(adata, batch_key: str = "batch") -> Optional[float]:
         return float(scib.me.kBET(adata, batch_key=batch_key))  # type: ignore
     except Exception:
         return None
+
+
+def compute_batch_metrics(X: np.ndarray, Z: np.ndarray, batches: np.ndarray, batch_key: str = "batch") -> Dict[str, float]:
+    A = adata_from_numpy(X, Z, batches, batch_key=batch_key)
+    if A is None:
+        return {}
+    out: Dict[str, float] = {}
+    ilisi = compute_ilisi(A, batch_key=batch_key)
+    if ilisi is not None:
+        out["ilisi"] = ilisi
+    kbet = compute_kbet(A, batch_key=batch_key)
+    if kbet is not None:
+        out["kbet"] = kbet
+    return out

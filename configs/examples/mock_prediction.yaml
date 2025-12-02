@@ -30,7 +30,7 @@ model:
       library: false
   beta: 1.0
 optim:
-  epochs: 1000
+  epochs: 10
   batch_size: 256
   lr: 0.001
   amp:
@@ -38,3 +38,8 @@ optim:
     dtype: bf16
 logging:
   run_dir: runs/mock
+evaluation:
+  enabled: true
+  tasks:
+  - prediction_accuracy
+  save_predictions: true

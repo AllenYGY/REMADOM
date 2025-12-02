@@ -23,12 +23,13 @@ This note summarises the Phase 1 architecture: data flow, core modules, losses
    - Heads are configurable per run and can have schedules (e.g., ramp up Sinkhorn epsilon).
 
 5. **Bridges & graph regularisers (optional)**  
-   - `remadom/bridges` provides mutual-nearest-neighbour and other bridge sampling utilities.  
+   - `remadom/bridges` provides mutual-nearest-neighbour and other bridge sampling utilities. Phase 2 adds the `BridgeHead`, which turns those edges into latent penalties and supports scheduled weights via the `bridge` config block.  
+   - CLI runs emit bridge diagnostics (`bridge_metrics.json`) capturing edge counts and degree statistics for sanity checks.  
    - `remadom/graph` builds kNN graphs and applies Laplacian penalties to preserve local structure.
 
 6. **Training loop**  
-   - `remadom/train/trainer.py` orchestrates optimisation: mixed precision (fp16/bf16), GradScaler, gradient clipping, β/weight schedules, head losses, logging, checkpointing.  
-   - CLI entry point (`remadom.cli.train`) wires configs, loaders, model, trainer, and saves outputs under `runs/<run_dir>`.
+   - `remadom/train/trainer.py` orchestrates optimisation: mixed precision (fp16/bf16), GradScaler, gradient clipping, β/weight/head schedules, per-head metrics, logging, checkpointing.  
+   - CLI entry point (`remadom.cli.train`) wires configs, loaders, model, trainer, writes history plus `metrics.final.json`, optional bridge diagnostics, and saves outputs under `runs/<run_dir>`.
 
 7. **Evaluation / utilities (Phase 2+)**  
    - Stubs exist for adapters, evaluators, autotuning; Phase 1 focuses on the backbone but keeps module boundaries ready for expansion.
