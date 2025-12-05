@@ -9,6 +9,8 @@ from torch.optim.lr_scheduler import LRScheduler, StepLR
 from ..align.base import AlignmentHead
 from ..align.gw import GWHead
 from ..align.mmd import MMDHead
+from ..align.graph import GraphHead
+from ..align.temporal import TemporalHead
 from ..align.sinkhorn import SinkhornHead
 from ..adapters.bridge_head import BridgeHead, build_bridge_provider
 from ..core.vae import MosaicVAE
@@ -72,6 +74,23 @@ def build_heads(cfg: ExperimentConfig) -> List[AlignmentHead]:
                 group_key=cfg.alignment.gw.group_key,
             )
         )
+    if getattr(cfg.alignment, "temporal", None) is not None and cfg.alignment.temporal.enabled:
+        heads.append(
+            TemporalHead(
+                weight=cfg.alignment.temporal.weight,
+                group_key=cfg.alignment.temporal.group_key,
+            )
+        )
+    if getattr(cfg, "structure", None) is not None and getattr(cfg.structure, "graph", None) is not None and cfg.structure.graph.enabled:
+        heads.append(
+            GraphHead(
+                weight=cfg.structure.graph.weight,
+                k=cfg.structure.graph.k,
+                metric=cfg.structure.graph.metric,
+                normalized=cfg.structure.graph.normalized,
+                lam=cfg.structure.graph.lam,
+            )
+        )
     if cfg.bridge.enabled:
         bridge_params = dict(cfg.bridge.params)
         normalize = bool(bridge_params.pop("normalize", cfg.bridge.normalize))
@@ -115,10 +134,18 @@ def apply_head_schedules(heads: Iterable[AlignmentHead], cfg: ExperimentConfig) 
             schedule_cfg = cfg.alignment.mmd.schedule
             param_name = "weight"
             default = cfg.alignment.mmd.weight
+        elif name == "temporal" and getattr(cfg.alignment, "temporal", None) is not None and cfg.alignment.temporal.enabled:
+            schedule_cfg = cfg.alignment.temporal.schedule
+            param_name = "weight"
+            default = cfg.alignment.temporal.weight
         elif name.startswith("bridge") and cfg.bridge.enabled:
             schedule_cfg = cfg.bridge.schedule
             param_name = "weight"
             default = cfg.bridge.weight
+        elif name == "graph" and getattr(cfg, "structure", None) is not None and getattr(cfg.structure, "graph", None) is not None and cfg.structure.graph.enabled:
+            schedule_cfg = cfg.structure.graph.schedule
+            param_name = "weight"
+            default = cfg.structure.graph.weight
 
         if schedule_cfg is None or param_name is None:
             bindings.append((head, None))

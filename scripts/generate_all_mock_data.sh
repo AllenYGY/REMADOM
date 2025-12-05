@@ -64,6 +64,10 @@ data.setdefault("evaluation", {})
 data["evaluation"]["enabled"] = True
 data["evaluation"]["tasks"] = ["${task}"]
 data["evaluation"]["save_predictions"] = True
+# Enable metric collection (SCIB/plots) and set a problem-specific run dir for clarity
+data.setdefault("logging", {})
+data["logging"]["collect_metrics"] = True
+data["logging"]["run_dir"] = f"runs/mock/mock_${problem}"
 with cfg_path.open("w", encoding="utf-8") as fh:
     yaml.safe_dump(data, fh, sort_keys=False)
 PY

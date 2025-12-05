@@ -51,7 +51,8 @@ optim:
     enabled: true
     dtype: bf16
 logging:
-  run_dir: runs/mock
+  run_dir: runs/mock/mock_hierarchical
+  collect_metrics: true
 evaluation:
   enabled: true
   tasks:

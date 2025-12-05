@@ -103,6 +103,8 @@ Version: M8.1
 - **Scalability polish:** upgrade AMP (torch.amp APIs), add CPU fallbacks, and profile dataloaders/checkpointing on >1e6 cells.
 - **Phase 3 plan:** draft a dedicated roadmap once the outstanding Phase 2 follow-ups land to avoid scope creep.
 
+For full Phase 3 planning, see `docs/phase3_plan.md`.
+
 ### 5.3) Phase 1 mock workflow
 
 - Generate synthetic data covering any problem type with the helper script:
@@ -424,8 +426,6 @@ Train:
 - Scanpy and scikit-learn for preprocessing utilities.
 
 ---
-
-If you’d like, I can also:
 
 - Generate a shorter “Quickstart” README focused on installation and a single working example.
 - Provide a tutorial notebook outline (cells for preprocessing, config, training, and evaluation).

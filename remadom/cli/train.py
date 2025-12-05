@@ -49,6 +49,7 @@ def cli_train(
     plot_umap: bool = False,
     plot_tsne: bool = False,
     resume: Optional[str] = None,
+    scib: bool = False,
 ) -> int:
     _log(f"loading config: {cfg_path}")
     cfg = resolve_config([cfg_path] + (overrides or []))
@@ -78,39 +79,6 @@ def cli_train(
     modality_schedules = get_modality_weight_schedules(cfg)
     optimizer, scheduler = build_optimizer(cfg, model)
 
-    if resume:
-        _log(f"resuming from checkpoint: {resume}")
-        trainer = Trainer(
-            model,
-            optimizer,
-            scheduler=scheduler,
-            heads=heads,
-            cfg=cfg,
-        )
-        resume_trainer(trainer, resume)
-        # ensure schedules available after resume
-        trainer.head_schedules = head_schedules
-        trainer._beta_schedule = beta_schedule
-        trainer._beta_value = float(beta_init)
-        trainer._modality_schedules = modality_schedules
-    else:
-        trainer = Trainer(
-            model,
-            optimizer,
-            scheduler=scheduler,
-            heads=heads,
-            cfg=cfg,
-            head_schedules=head_schedules,
-            beta_schedule=beta_schedule,
-            beta_init=beta_init,
-            modality_schedules=modality_schedules,
-        )
-
-    train_loader, val_loader, _ = build_dataloaders(cfg)
-    epochs = cfg.optim.epochs
-    batch_size = cfg.optim.batch_size
-    _log(f"starting training for {epochs} epochs with batch_size={batch_size}")
-
     trainer = Trainer(
         model,
         optimizer,
@@ -122,6 +90,18 @@ def cli_train(
         beta_init=beta_init,
         modality_schedules=modality_schedules,
     )
+    if resume:
+        _log(f"resuming from checkpoint: {resume}")
+        resume_trainer(trainer, resume)
+        trainer.head_schedules = head_schedules
+        trainer._beta_schedule = beta_schedule
+        trainer._beta_value = float(beta_init)
+        trainer._modality_schedules = modality_schedules
+
+    train_loader, val_loader, _ = build_dataloaders(cfg)
+    epochs = cfg.optim.epochs
+    batch_size = cfg.optim.batch_size
+    _log(f"starting training for {epochs} epochs with batch_size={batch_size}")
 
     history = trainer.fit(train_loader, val_loader)
     _log("training finished")
@@ -162,7 +142,7 @@ def cli_train(
     if plot_tsne:
         _maybe_plot_embedded(trainer, run_dir, kind="tsne")
     # Optional SCIB metrics if dependencies present
-    scib_metrics = _maybe_compute_scib(cfg, trainer, device)
+    scib_metrics = _maybe_compute_scib(cfg, trainer, device, enabled=scib)
     if scib_metrics:
         summary["scib"] = scib_metrics
         scib_path = run_dir / "scib_metrics.json"
@@ -184,6 +164,7 @@ def main():
     ap.add_argument("--plot-umap", action="store_true", help="Plot latent UMAP (requires umap-learn)")
     ap.add_argument("--plot-tsne", action="store_true", help="Plot latent t-SNE (requires scikit-learn)")
     ap.add_argument("--resume", type=str, help="Path to checkpoint to resume from")
+    ap.add_argument("--scib", action="store_true", help="Force SCIB batch metrics (requires scIB deps); defaults to logging.collect_metrics")
     ap.add_argument("overrides", nargs="*", help="OmegaConf-style overrides (optional)")
     args = ap.parse_args()
     return cli_train(
@@ -196,6 +177,7 @@ def main():
         plot_umap=args.plot_umap,
         plot_tsne=args.plot_tsne,
         resume=args.resume,
+        scib=args.scib,
     )
 
 
@@ -396,12 +378,12 @@ def _maybe_plot_embedded(trainer: Trainer, run_dir: Path, *, kind: str = "umap")
         _log(f"skipping {kind} plot (dependency missing)")
 
 
-def _maybe_compute_scib(cfg: ExperimentConfig, trainer: Trainer, device: torch.device) -> Dict[str, float]:
+def _maybe_compute_scib(cfg: ExperimentConfig, trainer: Trainer, device: torch.device, enabled: bool = False) -> Dict[str, float]:
     try:
         import anndata  # noqa: F401
     except Exception:
         return {}
-    if not getattr(cfg.logging, "collect_metrics", False):
+    if not (enabled or getattr(cfg.logging, "collect_metrics", False)):
         return {}
     # Rebuild a small loader without shuffle to get embeddings
     loader, _ = dataloader_from_source(

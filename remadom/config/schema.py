@@ -82,10 +82,33 @@ class GWConfig(BaseModel):
     group_key: str = "batch"
 
 
+class TemporalConfig(BaseModel):
+    enabled: bool = False
+    weight: float = 0.1
+    group_key: str = "time"
+    schedule: Optional[ScheduleConfig] = None
+    margin: float = 0.0  # reserved for future ranking losses
+
+
 class AlignmentConfig(BaseModel):
     mmd: MMDConfig = MMDConfig()
     ot: OTConfig = OTConfig()
     gw: GWConfig = GWConfig()
+    temporal: TemporalConfig = Field(default_factory=TemporalConfig)
+
+
+class GraphConfig(BaseModel):
+    enabled: bool = False
+    weight: float = 0.1
+    k: int = 15
+    metric: str = "euclidean"
+    normalized: bool = True
+    lam: float = 1e-3
+    schedule: Optional[ScheduleConfig] = None
+
+
+class StructureConfig(BaseModel):
+    graph: GraphConfig = GraphConfig()
 
 
 class BridgeConfig(BaseModel):
@@ -148,6 +171,7 @@ class ExperimentConfig(BaseModel):
     model: ModelConfig
     alignment: AlignmentConfig = AlignmentConfig()
     bridge: BridgeConfig = BridgeConfig()
+    structure: StructureConfig = StructureConfig()
     optim: OptimConfig = OptimConfig()
     logging: LoggingConfig = LoggingConfig()
     evaluation: EvaluationConfig = EvaluationConfig()
